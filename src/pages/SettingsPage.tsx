@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/common/Button'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/common/Card'
 import { Avatar } from '@/components/common/Avatar'
 import { User, Shield, KeyRound, Trash2 } from 'lucide-react'
 
@@ -24,7 +25,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6 animate-in fade-in duration-200">
+    <div className="max-w-3xl space-y-6 animate-in slide-up duration-200">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Account Settings</h1>
@@ -34,16 +35,18 @@ export function SettingsPage() {
       </div>
 
       {/* Profile Card */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs space-y-6">
-        <div className="flex items-center space-x-3 pb-4 border-b border-slate-100">
-          <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
-            <User className="w-5 h-5" />
+      <Card variant="default" padding="lg" hover={false}>
+        <CardHeader>
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-xl bg-primary-50 text-primary-600">
+              <User className="w-5 h-5" />
+            </div>
+            <div>
+              <CardTitle>User Profile</CardTitle>
+              <CardDescription>Your current account details</CardDescription>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-bold text-slate-900">User Profile</h2>
-            <p className="text-xs text-slate-500">Your current account details</p>
-          </div>
-        </div>
+        </CardHeader>
 
         <div className="flex items-center space-x-4 p-4 rounded-xl bg-slate-50 border border-slate-200/60">
           <Avatar email={user?.email} size="lg" />
@@ -54,19 +57,21 @@ export function SettingsPage() {
             <span className="text-base font-bold text-slate-900">{user?.email || 'N/A'}</span>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Security Section */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs space-y-6">
-        <div className="flex items-center space-x-3 pb-4 border-b border-slate-100">
-          <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
-            <Shield className="w-5 h-5" />
+      <Card variant="default" padding="lg" hover={false}>
+        <CardHeader>
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
+              <Shield className="w-5 h-5" />
+            </div>
+            <div>
+              <CardTitle>Security & Password</CardTitle>
+              <CardDescription>Password management and session security</CardDescription>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-bold text-slate-900">Security & Password</h2>
-            <p className="text-xs text-slate-500">Password management and session security</p>
-          </div>
-        </div>
+        </CardHeader>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-slate-200/80 bg-white">
           <div className="space-y-1">
@@ -82,23 +87,25 @@ export function SettingsPage() {
             Sign Out & Reset
           </Button>
         </div>
-      </div>
+      </Card>
 
       {/* Danger Zone Section */}
-      <div className="bg-white rounded-2xl p-6 border border-rose-200/80 shadow-2xs space-y-6">
-        <div className="flex items-center space-x-3 pb-4 border-b border-rose-100">
-          <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
-            <Trash2 className="w-5 h-5" />
+      <Card variant="filled" padding="lg" hover={false}>
+        <CardHeader>
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-xl bg-danger-50 text-danger-600">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div>
+              <CardTitle>Danger Zone</CardTitle>
+              <CardDescription>Irreversible actions on your account</CardDescription>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-bold text-rose-900">Danger Zone</h2>
-            <p className="text-xs text-slate-500">Irreversible actions on your account</p>
-          </div>
-        </div>
+        </CardHeader>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-rose-100 bg-rose-50/50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-danger-100 bg-danger-50/50">
           <div className="space-y-1">
-            <h3 className="text-sm font-bold text-rose-900">Delete Account</h3>
+            <h3 className="text-sm font-bold text-danger-900">Delete Account</h3>
             <p className="text-xs text-slate-500">
               Permanently delete your account and remove all stored invoice data.
             </p>
@@ -112,7 +119,7 @@ export function SettingsPage() {
             Delete Account
           </Button>
         </div>
-      </div>
+      </Card>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

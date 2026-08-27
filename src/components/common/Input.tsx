@@ -1,10 +1,10 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react'
+import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string
-  error?: string
-  hint?: string
-  icon?: ReactNode
+  label?: string;
+  error?: string;
+  hint?: string;
+  icon?: ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -12,11 +12,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full space-y-1.5">
         {label && (
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
+          <label className="block text-xs font-semibold text-slate-700">
             {label}
+            {props.required && <span className="text-danger-500 ml-0.5">*</span>}
           </label>
         )}
-        <div className="relative rounded-xl shadow-2xs">
+        <div className="relative rounded-xl">
           {icon && (
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               {icon}
@@ -28,20 +29,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               icon ? 'pl-10' : ''
             } ${
               error
-                ? 'border-rose-300 text-rose-900 focus:border-rose-500 focus:ring-rose-200'
-                : 'border-slate-200 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-600 focus:ring-blue-100'
+                ? 'border-danger-300 text-danger-900 focus:border-danger-500 focus:ring-danger-200'
+                : 'border-slate-200 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-primary-600 focus:ring-primary-100'
             } ${className}`}
             {...props}
           />
         </div>
         {error ? (
-          <p className="text-xs font-medium text-rose-600 animate-in fade-in duration-150">{error}</p>
+          <p className="text-xs font-medium text-danger-600 animate-in fade-in duration-150">{error}</p>
         ) : hint ? (
           <p className="text-xs text-slate-500">{hint}</p>
         ) : null}
       </div>
-    )
+    );
   }
-)
+);
 
-Input.displayName = 'Input'
+Input.displayName = 'Input';

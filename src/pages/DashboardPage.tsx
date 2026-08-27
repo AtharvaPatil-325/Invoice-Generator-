@@ -9,6 +9,7 @@ import { Button } from '@/components/common/Button'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Avatar } from '@/components/common/Avatar'
+import { CardIcon } from '@/components/common/Card'
 import { DropdownMenu } from '@/components/common/DropdownMenu'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { SkeletonStatCard, SkeletonTable } from '@/components/common/Skeleton'
@@ -28,8 +29,8 @@ import {
   Download,
   Copy,
   Trash2,
-  DollarSign,
   Briefcase,
+  Wallet,
 } from 'lucide-react'
 
 export function DashboardPage() {
@@ -143,41 +144,41 @@ export function DashboardPage() {
       title: 'Total Invoices',
       value: stats.total,
       icon: FileText,
-      color: 'text-blue-600',
-      bg: 'bg-blue-50 border-blue-100',
+      color: 'primary',
+      size: 'md',
     },
     {
       title: 'Draft',
       value: stats.draft,
       icon: FileClock,
-      color: 'text-slate-600',
-      bg: 'bg-slate-100 border-slate-200',
+      color: 'slate',
+      size: 'md',
     },
     {
       title: 'Sent',
       value: stats.sent,
       icon: Send,
-      color: 'text-indigo-600',
-      bg: 'bg-indigo-50 border-indigo-100',
+      color: 'indigo',
+      size: 'md',
     },
     {
       title: 'Paid',
       value: stats.paid,
       icon: CheckCircle2,
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-50 border-emerald-100',
+      color: 'success',
+      size: 'md',
     },
     {
       title: 'Overdue',
       value: stats.overdue,
       icon: AlertCircle,
-      color: 'text-rose-600',
-      bg: 'bg-rose-50 border-rose-100',
+      color: 'danger',
+      size: 'md',
     },
   ]
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-200">
+    <div className="space-y-8 animate-in slide-up duration-200">
       {/* Dashboard Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -187,7 +188,7 @@ export function DashboardPage() {
           </p>
         </div>
         <Link to="/app/invoices/create">
-          <Button icon={<Plus className="w-4 h-4" />} size="md" className="shadow-md">
+          <Button icon={<Plus className="w-4 h-4" />} size="md" className="shadow-sm">
             Create Invoice
           </Button>
         </Link>
@@ -195,20 +196,20 @@ export function DashboardPage() {
 
       {/* Stats Grid Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {statCards.map((card) => {
+        {statCards.map((card, index) => {
           const Icon = card.icon
           return (
             <div
               key={card.title}
-              className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+              className={`bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 animate-in slide-up stagger-${index + 1}`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   {card.title}
                 </span>
-                <div className={`p-2 rounded-xl border ${card.bg} ${card.color}`}>
+                <CardIcon color={card.color as any} size="sm">
                   <Icon className="w-4 h-4" />
-                </div>
+                </CardIcon>
               </div>
               <div className="mt-3 flex items-baseline justify-between">
                 <span className="text-2xl font-bold text-slate-900">{card.value}</span>
@@ -220,17 +221,17 @@ export function DashboardPage() {
 
       {/* Financial Summary & Revenue Card */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-linear-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-6 sm:p-8 shadow-xl border border-slate-800 relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 opacity-10 pointer-events-none">
+        <div className="lg:col-span-2 bg-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-lg border border-slate-800 relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 opacity-[0.08] pointer-events-none">
             <TrendingUp className="w-64 h-64 text-white" />
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <span className="p-2 rounded-xl bg-white/10 backdrop-blur-xs text-blue-400">
-                <DollarSign className="w-5 h-5" />
+              <span className="p-2 rounded-xl bg-white/10 backdrop-blur-xs text-primary-400">
+                <Wallet className="w-5 h-5" />
               </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
                 Total Invoice Value
               </span>
             </div>
@@ -251,7 +252,7 @@ export function DashboardPage() {
             </div>
             <div className="w-full h-2.5 bg-slate-700 rounded-full overflow-hidden p-0.5">
               <div
-                className="h-full bg-linear-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-success-500 to-teal-400 rounded-full transition-all duration-500"
                 style={{ width: `${paidPercentage}%` }}
               />
             </div>
@@ -259,19 +260,19 @@ export function DashboardPage() {
             <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">
               <div className="p-2 rounded-xl bg-white/5 border border-white/10">
                 <span className="block text-slate-400 text-[10px] uppercase font-semibold">Paid</span>
-                <span className="font-bold text-emerald-400 mt-0.5 block truncate">
+                <span className="font-bold text-success-400 mt-0.5 block truncate">
                   {formatCurrency(stats.paidValue, 'INR')}
                 </span>
               </div>
               <div className="p-2 rounded-xl bg-white/5 border border-white/10">
                 <span className="block text-slate-400 text-[10px] uppercase font-semibold">Pending</span>
-                <span className="font-bold text-amber-400 mt-0.5 block truncate">
+                <span className="font-bold text-warning-400 mt-0.5 block truncate">
                   {formatCurrency(stats.pendingValue, 'INR')}
                 </span>
               </div>
               <div className="p-2 rounded-xl bg-white/5 border border-white/10">
                 <span className="block text-slate-400 text-[10px] uppercase font-semibold">Overdue</span>
-                <span className="font-bold text-rose-400 mt-0.5 block truncate">
+                <span className="font-bold text-danger-400 mt-0.5 block truncate">
                   {formatCurrency(stats.overdueValue, 'INR')}
                 </span>
               </div>
@@ -282,9 +283,9 @@ export function DashboardPage() {
         {/* Quick Action / Tips Card */}
         <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
           <div className="space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <CardIcon color="primary" size="md">
               <Briefcase className="w-5 h-5" />
-            </div>
+            </CardIcon>
             <h3 className="text-base font-bold text-slate-900">Manage Your Business</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
               Ensure your business profile and tax details are completed so invoices automatically populate with correct info.
@@ -294,14 +295,14 @@ export function DashboardPage() {
           <div className="space-y-2 pt-6">
             <Link
               to="/app/clients"
-              className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-xs font-semibold text-slate-700 transition-colors"
+              className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-xs font-semibold text-slate-700 transition-colors duration-150"
             >
               <span>Manage Clients</span>
               <ArrowRight className="w-4 h-4 text-slate-400" />
             </Link>
             <Link
               to="/app/business-profile"
-              className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-xs font-semibold text-slate-700 transition-colors"
+              className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-xs font-semibold text-slate-700 transition-colors duration-150"
             >
               <span>Edit Business Profile</span>
               <ArrowRight className="w-4 h-4 text-slate-400" />
@@ -316,10 +317,10 @@ export function DashboardPage() {
           <h2 className="text-lg font-bold text-slate-900">Recent Invoices</h2>
           <Link
             to="/app/invoices"
-            className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center space-x-1 group"
+            className="text-xs font-bold text-primary-600 hover:text-primary-700 flex items-center space-x-1 group transition-colors duration-150"
           >
             <span>View All Invoices</span>
-            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform duration-150" />
           </Link>
         </div>
 
@@ -338,7 +339,7 @@ export function DashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                     <th className="px-6 py-3.5">Invoice</th>
                     <th className="px-6 py-3.5">Client</th>
                     <th className="px-6 py-3.5">Issue Date</th>
@@ -354,12 +355,12 @@ export function DashboardPage() {
                     return (
                       <tr
                         key={invoice.id}
-                        className="hover:bg-slate-50/80 transition-colors group"
+                        className="hover:bg-slate-50/80 transition-colors duration-150 group"
                       >
                         <td className="px-6 py-4 font-semibold text-slate-900 whitespace-nowrap">
                           <Link
                             to={`/app/invoices/${invoice.id}`}
-                            className="text-blue-600 hover:text-blue-800 hover:underline font-bold"
+                            className="text-primary-600 hover:text-primary-800 hover:underline font-bold transition-colors duration-150"
                           >
                             {invoice.invoice_number}
                           </Link>

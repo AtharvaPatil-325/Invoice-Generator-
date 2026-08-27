@@ -9,6 +9,7 @@ import { Input } from '@/components/common/Input'
 import { Modal } from '@/components/common/Modal'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Avatar } from '@/components/common/Avatar'
+import { Card } from '@/components/common/Card'
 import { DropdownMenu } from '@/components/common/DropdownMenu'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { SkeletonTable } from '@/components/common/Skeleton'
@@ -173,7 +174,7 @@ export function ClientManagementPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-6 animate-in slide-up duration-200">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -182,22 +183,22 @@ export function ClientManagementPage() {
             Manage your customer database, contact details, and billing information.
           </p>
         </div>
-        <Button icon={<UserPlus className="w-4 h-4" />} onClick={openCreateModal}>
+        <Button icon={<UserPlus className="w-4 h-4" />} onClick={openCreateModal} className="shadow-sm">
           Add Client
         </Button>
       </div>
 
       {/* Search Toolbar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs">
+      <Card variant="default" padding="md" hover={false}>
         <div className="max-w-md">
           <Input
-            placeholder="Search by client name, company, or email..."
+            placeholder="Search clients by name, company or email..."
             icon={<Search className="w-4 h-4" />}
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
           />
         </div>
-      </div>
+      </Card>
 
       {/* Clients Table / List */}
       {clients.length === 0 ? (
@@ -225,7 +226,7 @@ export function ClientManagementPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                   <th className="px-6 py-3.5">Client Name</th>
                   <th className="px-6 py-3.5">Company</th>
                   <th className="px-6 py-3.5">Email</th>
@@ -236,7 +237,7 @@ export function ClientManagementPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
                 {clients.map((client) => (
-                  <tr key={client.id} className="hover:bg-slate-50/80 transition-colors group">
+                  <tr key={client.id} className="hover:bg-slate-50/80 transition-colors duration-150 group">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-3">
                         <Avatar name={client.name} size="md" />
@@ -323,7 +324,7 @@ export function ClientManagementPage() {
             <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit(onSubmit)} loading={isSubmitting}>
+            <Button onClick={handleSubmit(onSubmit)} loading={isSubmitting} className="shadow-sm">
               {editingClient ? 'Update Client' : 'Save Client'}
             </Button>
           </div>
