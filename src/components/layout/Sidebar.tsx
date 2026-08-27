@@ -34,7 +34,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       {/* Mobile Backdrop Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs lg:hidden transition-opacity"
+          className="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-xs lg:hidden transition-opacity"
           onClick={onClose}
         />
       )}
@@ -47,14 +47,14 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       >
         <div className="flex flex-col h-full">
           {/* Header / Logo */}
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-                <Receipt className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center text-white shadow-sm shadow-primary-500/20">
+                <Receipt className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-lg font-bold text-slate-900 tracking-tight">InvoiceGen</span>
-                <span className="block text-[10px] font-semibold tracking-wider text-blue-600 uppercase">
+                <span className="text-base font-bold text-slate-900 tracking-tight">InvoiceGen</span>
+                <span className="block text-[10px] font-semibold tracking-wider text-primary-600 uppercase">
                   SaaS Dashboard
                 </span>
               </div>
@@ -63,7 +63,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="lg:hidden p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -75,7 +75,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             <NavLink
               to="/app/invoices/create"
               onClick={onClose}
-              className="flex items-center justify-center space-x-2 w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md shadow-blue-500/20 transition-all active:scale-[0.98]"
+              className="flex items-center justify-center space-x-2 w-full py-2.5 px-4 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm shadow-sm shadow-primary-500/20 transition-all active:scale-[0.98]"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Create Invoice</span>
@@ -85,7 +85,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           {/* Navigation Links */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             <div className="px-3 pb-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Navigation
+              Menu
             </div>
             {navItems.map((item) => {
               const Icon = item.icon
@@ -95,9 +95,9 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                   to={item.to}
                   onClick={onClose}
                   className={({ isActive }) =>
-                    `group relative flex items-center px-3.5 py-2.5 text-sm font-medium rounded-xl transition-all ${
+                    `group relative flex items-center px-3.5 py-2.5 text-sm font-medium rounded-xl transition-all duration-150 ${
                       isActive
-                        ? 'bg-blue-50/80 text-blue-700 font-semibold shadow-2xs'
+                        ? 'bg-primary-50/80 text-primary-700 font-semibold'
                         : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                     }`
                   }
@@ -105,11 +105,11 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                   {({ isActive }) => (
                     <>
                       {isActive && (
-                        <span className="absolute left-0 top-2 bottom-2 w-1 bg-blue-600 rounded-r-full" />
+                        <span className="absolute left-0 top-2 bottom-2 w-1 bg-primary-600 rounded-r-full transition-all duration-150" />
                       )}
                       <Icon
-                        className={`mr-3 w-4 h-4 shrink-0 transition-colors ${
-                          isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-700'
+                        className={`mr-3 w-4 h-4 shrink-0 transition-colors duration-150 ${
+                          isActive ? 'text-primary-600' : 'text-slate-400 group-hover:text-slate-700'
                         }`}
                       />
                       <span>{item.label}</span>
@@ -122,7 +122,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
           {/* User Profile Footer */}
           <div className="p-4 border-t border-slate-100 bg-slate-50/50">
-            <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200/60 shadow-2xs">
+            <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200/60">
               <div className="flex items-center space-x-2.5 min-w-0">
                 <Avatar email={user?.email} size="sm" />
                 <div className="min-w-0 flex-1">
@@ -134,7 +134,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 type="button"
                 onClick={signOut}
                 title="Sign Out"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors duration-150"
               >
                 <LogOut className="w-4 h-4" />
               </button>

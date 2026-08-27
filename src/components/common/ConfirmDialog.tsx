@@ -1,15 +1,16 @@
-import { Modal } from './Modal'
-import { Button } from './Button'
-import { AlertTriangle } from 'lucide-react'
+import { Modal } from './Modal';
+import { Button } from './Button';
+import { AlertTriangle } from 'lucide-react';
 
 interface ConfirmDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  onConfirm: () => void
-  title: string
-  message: string
-  confirmLabel?: string
-  loading?: boolean
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  confirmVariant?: 'danger' | 'primary';
+  loading?: boolean;
 }
 
 export function ConfirmDialog({
@@ -19,12 +20,13 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel = 'Delete',
+  confirmVariant = 'danger',
   loading = false,
 }: ConfirmDialogProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="sm">
       <div className="text-center py-2 space-y-4">
-        <div className="mx-auto w-12 h-12 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
+        <div className="mx-auto w-12 h-12 rounded-2xl bg-danger-50 border border-danger-100 flex items-center justify-center text-danger-600">
           <AlertTriangle className="w-6 h-6" />
         </div>
         <div className="space-y-1">
@@ -35,11 +37,11 @@ export function ConfirmDialog({
           <Button variant="secondary" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={onConfirm} loading={loading}>
+          <Button variant={confirmVariant} onClick={onConfirm} loading={loading}>
             {confirmLabel}
           </Button>
         </div>
       </div>
     </Modal>
-  )
+  );
 }

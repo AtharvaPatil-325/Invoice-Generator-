@@ -3,9 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/common/Button'
+import { StatusBadge } from '@/components/common/StatusBadge'
 import { SkeletonTable } from '@/components/common/Skeleton'
 import { EmptyState } from '@/components/common/EmptyState'
-import { StatusBadge } from '@/components/common/StatusBadge'
 import type { Invoice, BusinessProfile, InvoiceItem } from '@/types'
 import { getInvoice } from '@/services/invoiceService'
 import { getBusinessProfile, getLogoUrl } from '@/services/businessProfileService'
@@ -97,7 +97,7 @@ export function InvoicePreviewPage() {
   const overdueFlag = isOverdue(invoice.due_date, invoice.status)
 
   return (
-    <div className="max-w-4xl space-y-6 animate-in fade-in duration-200">
+    <div className="max-w-4xl space-y-6 animate-in slide-up duration-200">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
         <div className="flex items-center space-x-3">
           <Button
@@ -121,7 +121,7 @@ export function InvoicePreviewPage() {
               value={overdueFlag && invoice.status !== 'paid' && invoice.status !== 'cancelled' ? 'overdue' : invoice.status}
               onChange={(e) => handleStatusChange(e.target.value as any)}
               disabled={updatingStatus}
-              className="text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 disabled:opacity-50"
+              className="text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-600 disabled:opacity-50 transition-all duration-150"
             >
               <option value="draft">Draft</option>
               <option value="sent">Sent</option>
@@ -148,7 +148,7 @@ export function InvoicePreviewPage() {
           <Button
             icon={<Download className="w-4 h-4" />}
             onClick={handleDownload}
-            className="shadow-md"
+            className="shadow-sm"
           >
             Download PDF
           </Button>
@@ -161,7 +161,7 @@ export function InvoicePreviewPage() {
             {logoUrl ? (
               <img src={logoUrl} alt="Logo" className="h-14 object-contain" />
             ) : (
-              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center">
                 <Building2 className="w-6 h-6" />
               </div>
             )}
@@ -178,7 +178,7 @@ export function InvoicePreviewPage() {
           </div>
 
           <div className="sm:text-right space-y-2">
-            <h1 className="text-3xl font-extrabold text-blue-600 tracking-tight">INVOICE</h1>
+            <h1 className="text-3xl font-extrabold text-primary-600 tracking-tight">INVOICE</h1>
             <p className="text-base font-bold text-slate-900 font-mono">#{invoice.invoice_number}</p>
             <div className="text-xs text-slate-500 space-y-1 pt-1">
               <p><span className="font-semibold text-slate-700">Issue Date:</span> {formatDate(invoice.issue_date)}</p>
@@ -249,14 +249,14 @@ export function InvoicePreviewPage() {
               <span className="text-slate-900">{formatCurrency(invoice.tax_amount, invoice.currency)}</span>
             </div>
             {invoice.discount_amount > 0 && (
-              <div className="flex justify-between font-semibold text-emerald-600">
+              <div className="flex justify-between font-semibold text-success-600">
                 <span>Discount</span>
                 <span>-{formatCurrency(invoice.discount_amount, invoice.currency)}</span>
               </div>
             )}
             <div className="flex justify-between items-center text-base font-extrabold text-slate-900 border-t-2 border-slate-900 pt-3">
               <span>Total Amount</span>
-              <span className="text-blue-600 font-mono">{formatCurrency(invoice.total_amount, invoice.currency)}</span>
+              <span className="text-primary-600 font-mono">{formatCurrency(invoice.total_amount, invoice.currency)}</span>
             </div>
           </div>
         </div>
@@ -264,9 +264,9 @@ export function InvoicePreviewPage() {
         {(invoice.notes || invoice.terms || invoice.payment_instructions) && (
           <div className="border-t border-slate-200/80 pt-6 space-y-4 text-xs">
             {invoice.payment_instructions && (
-              <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-100">
-                <h4 className="font-bold text-blue-900 uppercase text-[10px] tracking-wider mb-1">Payment Instructions</h4>
-                <p className="text-blue-800 whitespace-pre-line">{invoice.payment_instructions}</p>
+              <div className="p-4 rounded-xl bg-primary-50/60 border border-primary-100">
+                <h4 className="font-bold text-primary-900 uppercase text-[10px] tracking-wider mb-1">Payment Instructions</h4>
+                <p className="text-primary-800 whitespace-pre-line">{invoice.payment_instructions}</p>
               </div>
             )}
             {invoice.notes && (

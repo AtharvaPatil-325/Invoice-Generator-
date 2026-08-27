@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/common/Card'
 import { SkeletonTable } from '@/components/common/Skeleton'
 import type { BusinessProfile } from '@/types'
 import {
@@ -147,7 +148,7 @@ export function BusinessProfilePage() {
   }
 
   return (
-    <div className="max-w-3xl space-y-6 animate-in fade-in duration-200">
+    <div className="max-w-3xl space-y-6 animate-in slide-up duration-200">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Business Profile</h1>
@@ -158,142 +159,154 @@ export function BusinessProfilePage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Section 1: Logo & Identity */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs space-y-6">
-          <div className="flex items-center space-x-3 pb-3 border-b border-slate-100">
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
-              <Building2 className="w-5 h-5" />
+        <Card variant="default" padding="lg" hover={false}>
+          <CardHeader>
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-primary-50 text-primary-600">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <CardTitle>Company Identity & Logo</CardTitle>
+                <CardDescription>Your logo will appear on exported PDF invoices.</CardDescription>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Company Identity & Logo</h2>
-              <p className="text-xs text-slate-500">Your logo will appear on exported PDF invoices.</p>
-            </div>
-          </div>
+          </CardHeader>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-            {/* Logo Avatar Box */}
-            <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 relative group">
-              {logoPreview ? (
-                <img src={logoPreview} alt="Business Logo" className="w-full h-full object-contain p-2" />
-              ) : (
-                <Building2 className="w-8 h-8 text-slate-300" />
-              )}
-            </div>
-
-            {/* Upload Buttons */}
-            <div className="space-y-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleLogoUpload}
-              />
-              <div className="flex items-center space-x-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  icon={<Upload className="w-3.5 h-3.5" />}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Upload New Logo
-                </Button>
-                {profile?.logo_path && (
-                  <Button
-                    type="button"
-                    variant="danger"
-                    size="sm"
-                    icon={<Trash2 className="w-3.5 h-3.5" />}
-                    onClick={handleRemoveLogo}
-                  >
-                    Remove
-                  </Button>
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+              {/* Logo Avatar Box */}
+              <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 relative group">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Business Logo" className="w-full h-full object-contain p-2" />
+                ) : (
+                  <Building2 className="w-8 h-8 text-slate-300" />
                 )}
               </div>
-              <p className="text-[11px] text-slate-400">
-                Recommended: Square PNG, JPG or SVG, max size 2MB.
-              </p>
-            </div>
-          </div>
 
-          <Input
-            label="Business / Company Name *"
-            {...register('business_name')}
-            error={errors.business_name?.message}
-            placeholder="e.g. Acme Creative Agency"
-          />
-        </div>
+              {/* Upload Buttons */}
+              <div className="space-y-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleLogoUpload}
+                />
+                <div className="flex items-center space-x-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    icon={<Upload className="w-3.5 h-3.5" />}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Upload New Logo
+                  </Button>
+                  {profile?.logo_path && (
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      icon={<Trash2 className="w-3.5 h-3.5" />}
+                      onClick={handleRemoveLogo}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Recommended: Square PNG, JPG or SVG, max size 2MB.
+                </p>
+              </div>
+            </div>
+
+            <Input
+              label="Business / Company Name *"
+              {...register('business_name')}
+              error={errors.business_name?.message}
+              placeholder="e.g. Acme Creative Agency"
+            />
+          </div>
+        </Card>
 
         {/* Section 2: Contact Details */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs space-y-6">
-          <div className="flex items-center space-x-3 pb-3 border-b border-slate-100">
-            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
-              <Mail className="w-5 h-5" />
+        <Card variant="default" padding="lg" hover={false}>
+          <CardHeader>
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
+                <Mail className="w-5 h-5" />
+              </div>
+              <div>
+                <CardTitle>Contact Information</CardTitle>
+                <CardDescription>Contact info displayed on invoices.</CardDescription>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Contact Information</h2>
-              <p className="text-xs text-slate-500">Contact info displayed on invoices.</p>
+          </CardHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Business Email"
+                type="email"
+                icon={<Mail className="w-4 h-4" />}
+                {...register('email')}
+                error={errors.email?.message}
+                placeholder="billing@yourcompany.com"
+              />
+              <Input
+                label="Phone Number"
+                icon={<Phone className="w-4 h-4" />}
+                {...register('phone')}
+                placeholder="+91 98765 43210"
+              />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="Business Email"
-              type="email"
-              icon={<Mail className="w-4 h-4" />}
-              {...register('email')}
-              error={errors.email?.message}
-              placeholder="billing@yourcompany.com"
-            />
-            <Input
-              label="Phone Number"
-              icon={<Phone className="w-4 h-4" />}
-              {...register('phone')}
-              placeholder="+91 98765 43210"
+              label="Website URL"
+              icon={<Globe className="w-4 h-4" />}
+              {...register('website')}
+              error={errors.website?.message}
+              placeholder="https://yourcompany.com"
             />
           </div>
-
-          <Input
-            label="Website URL"
-            icon={<Globe className="w-4 h-4" />}
-            {...register('website')}
-            error={errors.website?.message}
-            placeholder="https://yourcompany.com"
-          />
-        </div>
+        </Card>
 
         {/* Section 3: Address & Tax info */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs space-y-6">
-          <div className="flex items-center space-x-3 pb-3 border-b border-slate-100">
-            <div className="p-2 rounded-xl bg-teal-50 text-teal-600">
-              <MapPin className="w-5 h-5" />
+        <Card variant="default" padding="lg" hover={false}>
+          <CardHeader>
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-teal-50 text-teal-600">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <div>
+                <CardTitle>Address & Tax Details</CardTitle>
+                <CardDescription>Official business location and registration numbers.</CardDescription>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Address & Tax Details</h2>
-              <p className="text-xs text-slate-500">Official business location and registration numbers.</p>
+          </CardHeader>
+
+          <div className="space-y-4">
+            <Input
+              label="Street Address"
+              {...register('address')}
+              placeholder="Suite 500, Tech Park, MG Road"
+            />
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Input label="City" {...register('city')} placeholder="Bengaluru" />
+              <Input label="State" {...register('state')} placeholder="Karnataka" />
+              <Input label="Postal Code" {...register('postal_code')} placeholder="560001" />
+              <Input label="Country" {...register('country')} placeholder="India" />
             </div>
+
+            <Input
+              label="GSTIN / Tax Registration Number"
+              icon={<FileCheck className="w-4 h-4" />}
+              {...register('tax_number')}
+              placeholder="e.g. 29ABCDE1234F1Z5"
+            />
           </div>
-
-          <Input
-            label="Street Address"
-            {...register('address')}
-            placeholder="Suite 500, Tech Park, MG Road"
-          />
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Input label="City" {...register('city')} placeholder="Bengaluru" />
-            <Input label="State" {...register('state')} placeholder="Karnataka" />
-            <Input label="Postal Code" {...register('postal_code')} placeholder="560001" />
-            <Input label="Country" {...register('country')} placeholder="India" />
-          </div>
-
-          <Input
-            label="GSTIN / Tax Registration Number"
-            icon={<FileCheck className="w-4 h-4" />}
-            {...register('tax_number')}
-            placeholder="e.g. 29ABCDE1234F1Z5"
-          />
-        </div>
+        </Card>
 
         {/* Save Bar */}
         <div className="flex justify-end pt-2">
@@ -302,7 +315,7 @@ export function BusinessProfilePage() {
             loading={saving}
             size="lg"
             icon={<Save className="w-4 h-4" />}
-            className="w-full sm:w-auto shadow-md"
+            className="w-full sm:w-auto shadow-sm"
           >
             Save Business Profile
           </Button>

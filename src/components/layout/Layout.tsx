@@ -32,13 +32,13 @@ export function Layout() {
       {/* Main Right Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header Bar */}
-        <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-8 flex items-center justify-between shrink-0 z-10">
+        <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between shrink-0 z-10">
           <div className="flex items-center space-x-3">
             {/* Mobile Hamburger Toggle */}
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              className="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors duration-150"
               aria-label="Open menu"
             >
               <Menu className="w-5 h-5" />
@@ -46,7 +46,7 @@ export function Layout() {
 
             {/* Mobile Logo Indicator */}
             <div className="lg:hidden flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
+              <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center text-white">
                 <Receipt className="w-4 h-4" />
               </div>
               <span className="font-bold text-slate-900 text-sm">InvoiceGen</span>
@@ -63,7 +63,7 @@ export function Layout() {
             {/* Create Invoice Action */}
             <NavLink
               to="/app/invoices/create"
-              className="hidden sm:inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-2xs shadow-blue-500/20 transition-all active:scale-[0.98]"
+              className="hidden sm:inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold text-xs shadow-sm shadow-primary-500/20 transition-all active:scale-[0.98]"
             >
               <Plus className="w-4 h-4" />
               <span>New Invoice</span>
