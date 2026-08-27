@@ -8,127 +8,308 @@ export function generateInvoicePDF(
 ) {
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.getWidth()
-  let yPos = 20
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 18
+  let yPos = margin
 
-  doc.setFontSize(10)
-  doc.setTextColor(100)
+  const brandBlueR = 37
+  const brandBlueG = 99
+  const brandBlueB = 235
+  const darkGrayR = 15
+  const darkGrayG = 23
+  const darkGrayB = 42
+  const mediumGrayR = 100
+  const mediumGrayG = 116
+  const mediumGrayB = 139
+  const lightGrayR = 241
+  const lightGrayG = 245
+  const lightGrayB = 249
+  const borderGrayR = 226
+  const borderGrayG = 232
+  const borderGrayB = 240
 
-  if (business?.logo_path) {
-    doc.text(business.business_name, pageWidth - 80, yPos, { align: 'right' })
+  const headerBusiness = business?.business_name || 'Your Business'
+
+  if (yPos + 28 > pageHeight) {
+    doc.addPage()
+    yPos = margin
   }
 
-  yPos = business?.logo_path ? 30 : 20
-  doc.setFontSize(16)
-  doc.setTextColor(0, 0, 0)
-  doc.text('INVOICE', pageWidth / 2, yPos, { align: 'center' })
-
-  yPos += 10
-  doc.setFontSize(9)
-  doc.setTextColor(100)
-  doc.text(`Invoice #: ${invoice.invoice_number}`, 20, yPos)
-  doc.text(`Issue Date: ${formatDate(invoice.issue_date)}`, pageWidth - 80, yPos, { align: 'right' })
+  doc.setFillColor(brandBlueR, brandBlueG, brandBlueB)
+  doc.roundedRect(margin, yPos, pageWidth - margin * 2, 26, 3, 3, 'F')
   yPos += 6
-  doc.text(`Due Date: ${formatDate(invoice.due_date)}`, pageWidth - 80, yPos, { align: 'right' })
-  doc.text(`Status: ${invoice.status.toUpperCase()}`, 20, yPos)
-  yPos += 10
 
-  doc.setDrawColor(200)
-  doc.line(20, yPos, pageWidth - 20, yPos)
-  yPos += 8
-
-  doc.setFontSize(10)
-  doc.setTextColor(0, 0, 0)
-  doc.text('Bill To:', 20, yPos)
-  yPos += 6
-  doc.text(invoice.client.name, 20, yPos)
-  if (invoice.client.company_name) {
-    yPos += 5
-    doc.text(invoice.client.company_name, 20, yPos)
-  }
-  if (invoice.client.email) {
-    yPos += 5
-    doc.text(invoice.client.email, 20, yPos)
-  }
-  if (invoice.client.address) {
-    yPos += 5
-    const addr = [invoice.client.address, invoice.client.city, invoice.client.state, invoice.client.country, invoice.client.postal_code].filter(Boolean).join(', ')
-    doc.text(addr, 20, yPos)
-  }
-
-  yPos += 10
-  doc.setDrawColor(200)
-  doc.line(20, yPos, pageWidth - 20, yPos)
-  yPos += 8
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(18)
+  doc.setFont('helvetica', 'bold')
+  doc.text(headerBusiness, margin + 6, yPos)
 
   doc.setFontSize(9)
-  doc.setTextColor(80)
-  doc.text('Description', 20, yPos)
-  doc.text('Qty', 90, yPos, { align: 'right' })
-  doc.text('Rate', 110, yPos, { align: 'right' })
-  doc.text('Tax', 130, yPos, { align: 'right' })
-  doc.text('Amount', pageWidth - 20, yPos, { align: 'right' })
-  yPos += 3
-  doc.line(20, yPos, pageWidth - 20, yPos)
-  yPos += 5
+  doc.setFont('helvetica', 'normal')
+  const businessLines = [
+    business?.address || '',
+    [business?.city, business?.state, business?.country, business?.postal_code].filter(Boolean).join(', '),
+    business?.email || '',
+    business?.phone || '',
+  ].filter(Boolean)
 
-  doc.setTextColor(0, 0, 0)
-  for (const item of invoice.items) {
-    const lines = doc.splitTextToSize(item.name, 60)
-    doc.text(lines, 20, yPos)
-    const itemHeight = lines.length * 4
-    doc.text(String(item.quantity), 90, yPos, { align: 'right' })
-    doc.text(formatCurrency(item.unit_price, invoice.currency), 110, yPos, { align: 'right' })
-    doc.text(`${item.tax_rate}%`, 130, yPos, { align: 'right' })
-    doc.text(formatCurrency(item.line_total, invoice.currency), pageWidth - 20, yPos, { align: 'right' })
+  businessLines.forEach((line, idx) => {
+    doc.text(line, margin + 6, yPos + 5 + idx * 4.2)
+  })
+
+  const rightX = pageWidth - margin - 6
+  doc.setFontSize(26)
+  doc.setFont('helvetica', 'bold')
+  doc.text('INVOICE', rightX, yPos + 10, { align: 'right' })
+
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'normal')
+  const metaLines = [
+    `Invoice #: ${invoice.invoice_number}`,
+    `Issue Date: ${formatDate(invoice.issue_date)}`,
+    `Due Date: ${formatDate(invoice.due_date)}`,
+  ]
+  metaLines.forEach((line, idx) => {
+    doc.text(line, rightX, yPos + 18 + idx * 5, { align: 'right' })
+  })
+
+  const overdueFlag = invoice.status !== 'paid' && invoice.status !== 'cancelled' && new Date(invoice.due_date) < new Date()
+  const displayStatus = overdueFlag ? 'overdue' : invoice.status
+  const statusLabel = displayStatus.toUpperCase()
+
+  yPos += 28
+
+  if (yPos + 44 > pageHeight) {
+    doc.addPage()
+    yPos = margin
+  }
+
+  const clientX = margin
+  const clientW = (pageWidth - margin * 2) / 2 - 6
+  const clientBoxHeight = 38
+
+  doc.setFillColor(255, 255, 255)
+  doc.roundedRect(clientX, yPos, clientW, clientBoxHeight, 4, 4, 'F')
+  doc.setDrawColor(borderGrayR, borderGrayG, borderGrayB)
+  doc.roundedRect(clientX, yPos, clientW, clientBoxHeight, 4, 4, 'S')
+
+  doc.setTextColor(mediumGrayR, mediumGrayG, mediumGrayB)
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'bold')
+  doc.text('BILL TO', clientX + 6, yPos + 8)
+
+  const clientDetails = [
+    invoice.client?.name || '',
+    invoice.client?.company_name || '',
+    invoice.client?.email || '',
+    invoice.client?.phone || '',
+    [invoice.client?.address, invoice.client?.city, invoice.client?.state, invoice.client?.country, invoice.client?.postal_code].filter(Boolean).join(', '),
+  ].filter(Boolean)
+
+  doc.setTextColor(darkGrayR, darkGrayG, darkGrayB)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  clientDetails.slice(0, 4).forEach((line, idx) => {
+    doc.text(line, clientX + 6, yPos + 16 + idx * 5)
+  })
+
+  const summaryX = clientX + clientW + 12
+  const summaryW = clientW
+  const summaryBoxHeight = 38
+
+  doc.setFillColor(255, 255, 255)
+  doc.roundedRect(summaryX, yPos, summaryW, summaryBoxHeight, 4, 4, 'F')
+  doc.setDrawColor(borderGrayR, borderGrayG, borderGrayB)
+  doc.roundedRect(summaryX, yPos, summaryW, summaryBoxHeight, 4, 4, 'S')
+
+  doc.setTextColor(mediumGrayR, mediumGrayG, mediumGrayB)
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'bold')
+  doc.text('INVOICE DETAILS', summaryX + 6, yPos + 8)
+
+  const summaryDetails = [
+    `Invoice #: ${invoice.invoice_number}`,
+    `Issue Date: ${formatDate(invoice.issue_date)}`,
+    `Due Date: ${formatDate(invoice.due_date)}`,
+    `Status: ${statusLabel}`,
+  ]
+
+  doc.setTextColor(darkGrayR, darkGrayG, darkGrayB)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  summaryDetails.forEach((line, idx) => {
+    doc.text(line, summaryX + 6, yPos + 16 + idx * 5)
+  })
+
+  yPos += clientBoxHeight + 8
+
+  const tableHeaderY = yPos
+  const colX = [margin, margin + 8, margin + 92, margin + 122, margin + 145]
+
+  if (tableHeaderY + 18 > pageHeight) {
+    doc.addPage()
+    yPos = margin
+  }
+
+  doc.setFillColor(lightGrayR, lightGrayG, lightGrayB)
+  doc.roundedRect(margin, yPos, pageWidth - margin * 2, 10, 2, 2, 'F')
+  doc.setTextColor(mediumGrayR, mediumGrayG, mediumGrayB)
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Description', colX[0], yPos + 6)
+  doc.text('Qty', colX[2], yPos + 6, { align: 'right' })
+  doc.text('Rate', colX[3], yPos + 6, { align: 'right' })
+  doc.text('Amount', colX[4], yPos + 6, { align: 'right' })
+  yPos += 12
+
+  doc.setDrawColor(borderGrayR, borderGrayG, borderGrayB)
+  doc.line(margin, yPos, pageWidth - margin, yPos)
+  yPos += 2
+
+  doc.setTextColor(darkGrayR, darkGrayG, darkGrayB)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+
+  const items = invoice.items || []
+  items.forEach((item, idx) => {
+    if (yPos + 18 > pageHeight) {
+      doc.addPage()
+      yPos = margin
+      doc.setFillColor(lightGrayR, lightGrayG, lightGrayB)
+      doc.roundedRect(margin, yPos, pageWidth - margin * 2, 10, 2, 2, 'F')
+      doc.setTextColor(mediumGrayR, mediumGrayG, mediumGrayB)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Description', colX[0], yPos + 6)
+      doc.text('Qty', colX[2], yPos + 6, { align: 'right' })
+      doc.text('Rate', colX[3], yPos + 6, { align: 'right' })
+      doc.text('Amount', colX[4], yPos + 6, { align: 'right' })
+      yPos += 12
+      doc.setDrawColor(borderGrayR, borderGrayG, borderGrayB)
+      doc.line(margin, yPos, pageWidth - margin, yPos)
+      yPos += 2
+      doc.setTextColor(darkGrayR, darkGrayG, darkGrayB)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+    }
+
+    const itemLabel = item.name
+    const itemDescription = item.description ? ` - ${item.description}` : ''
+    const fullItemText = `${itemLabel}${itemDescription}`
+    const maxWidth = pageWidth - margin * 2 - 8
+    const itemLines = doc.splitTextToSize(fullItemText, maxWidth)
+    const itemHeight = Math.max(itemLines.length * 5.2, 8)
+
+    if (idx % 2 === 0) {
+      doc.setFillColor(248, 250, 252)
+      doc.roundedRect(margin, yPos, pageWidth - margin * 2, itemHeight, 2, 2, 'F')
+    }
+
+    doc.text(itemLines, colX[0], yPos + 5)
+    doc.text(String(item.quantity), colX[2], yPos + 5, { align: 'right' })
+    doc.text(formatCurrency(item.unit_price, invoice.currency), colX[3], yPos + 5, { align: 'right' })
+    doc.text(formatCurrency(item.line_total, invoice.currency), colX[4], yPos + 5, { align: 'right' })
     yPos += itemHeight + 4
-  }
+  })
 
-  yPos += 5
-  doc.setDrawColor(200)
-  doc.line(20, yPos, pageWidth - 20, yPos)
+  yPos += 4
+  doc.setDrawColor(borderGrayR, borderGrayG, borderGrayB)
+  doc.line(margin, yPos, pageWidth - margin, yPos)
   yPos += 8
 
+  const subtotal = invoice.subtotal || 0
+  const taxAmount = invoice.tax_amount || 0
+  const discountAmount = invoice.discount_amount || 0
+  const totalAmount = invoice.total_amount || 0
+
+  const totalsLeftX = pageWidth - margin - 85
+  const totalsRightX = pageWidth - margin
+
   doc.setFontSize(10)
-  doc.setTextColor(0, 0, 0)
-  doc.text(`Subtotal:`, pageWidth - 60, yPos, { align: 'right' })
-  doc.text(formatCurrency(invoice.subtotal, invoice.currency), pageWidth - 20, yPos, { align: 'right' })
-  yPos += 6
-  doc.text(`Tax:`, pageWidth - 60, yPos, { align: 'right' })
-  doc.text(formatCurrency(invoice.tax_amount, invoice.currency), pageWidth - 20, yPos, { align: 'right' })
-  yPos += 6
-  if (invoice.discount_amount > 0) {
-    doc.text(`Discount:`, pageWidth - 60, yPos, { align: 'right' })
-    doc.text(`-${formatCurrency(invoice.discount_amount, invoice.currency)}`, pageWidth - 20, yPos, { align: 'right' })
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(mediumGrayR, mediumGrayG, mediumGrayB)
+
+  const totals: Array<{ label: string; value: number }> = [
+    { label: 'Subtotal', value: subtotal },
+    { label: 'Tax', value: taxAmount },
+  ]
+
+  if (discountAmount > 0) {
+    totals.push({ label: 'Discount', value: discountAmount })
+  }
+
+  totals.forEach((row) => {
+    if (yPos + 8 > pageHeight) {
+      doc.addPage()
+      yPos = margin
+    }
+    doc.text(row.label, totalsLeftX, yPos, { align: 'right' })
+    doc.setTextColor(darkGrayR, darkGrayG, darkGrayB)
+    doc.text(formatCurrency(row.value, invoice.currency), totalsRightX, yPos, { align: 'right' })
+    doc.setTextColor(mediumGrayR, mediumGrayG, mediumGrayB)
     yPos += 6
-  }
+  })
+
+  yPos += 2
+  doc.setFillColor(brandBlueR, brandBlueG, brandBlueB)
+  doc.roundedRect(totalsLeftX - 6, yPos, 91, 14, 3, 3, 'F')
+  doc.setTextColor(255, 255, 255)
   doc.setFontSize(12)
-  doc.setTextColor(0, 0, 0)
-  doc.text(`Total:`, pageWidth - 60, yPos, { align: 'right' })
-  doc.text(formatCurrency(invoice.total_amount, invoice.currency), pageWidth - 20, yPos, { align: 'right' })
-  yPos += 10
+  doc.setFont('helvetica', 'bold')
+  doc.text('TOTAL', totalsLeftX, yPos + 9, { align: 'right' })
+  doc.text(formatCurrency(totalAmount, invoice.currency), totalsRightX, yPos + 9, { align: 'right' })
+  yPos += 20
 
-  if (invoice.notes) {
+  if (invoice.payment_instructions && yPos + 24 < pageHeight - margin) {
+    doc.setFillColor(lightGrayR, lightGrayG, lightGrayB)
+    doc.roundedRect(margin, yPos, pageWidth - margin * 2, 22, 3, 3, 'F')
+    doc.setTextColor(brandBlueR, brandBlueG, brandBlueB)
     doc.setFontSize(9)
-    doc.setTextColor(80)
-    doc.text('Notes:', 20, yPos)
-    yPos += 5
-    doc.text(invoice.notes, 20, yPos, { maxWidth: pageWidth - 40 })
+    doc.setFont('helvetica', 'bold')
+    doc.text('Payment Instructions', margin + 6, yPos + 7)
+    doc.setTextColor(darkGrayR, darkGrayG, darkGrayB)
+    doc.setFont('helvetica', 'normal')
+    const paymentLines = doc.splitTextToSize(invoice.payment_instructions, pageWidth - margin * 2 - 12)
+    doc.text(paymentLines.slice(0, 2), margin + 6, yPos + 14)
+    yPos += 28
   }
 
-  if (business) {
-    yPos += 20
-    doc.setFontSize(8)
-    doc.setTextColor(150)
-    doc.text(business.business_name, 20, yPos)
-    if (business.email) {
-      yPos += 4
-      doc.text(business.email, 20, yPos)
-    }
-    if (business.phone) {
-      yPos += 4
-      doc.text(business.phone, 20, yPos)
-    }
+  if (invoice.notes && yPos + 24 < pageHeight - margin) {
+    doc.setFillColor(lightGrayR, lightGrayG, lightGrayB)
+    doc.roundedRect(margin, yPos, pageWidth - margin * 2, 22, 3, 3, 'F')
+    doc.setTextColor(mediumGrayR, mediumGrayG, mediumGrayB)
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Notes', margin + 6, yPos + 7)
+    doc.setTextColor(darkGrayR, darkGrayG, darkGrayB)
+    doc.setFont('helvetica', 'normal')
+    const noteLines = doc.splitTextToSize(invoice.notes, pageWidth - margin * 2 - 12)
+    doc.text(noteLines.slice(0, 2), margin + 6, yPos + 14)
+    yPos += 28
   }
 
-  doc.save(`Invoice_${invoice.invoice_number}.pdf`)
+  if (yPos + 28 > pageHeight) {
+    doc.addPage()
+    yPos = margin
+  }
+
+  doc.setFillColor(lightGrayR, lightGrayG, lightGrayB)
+  doc.roundedRect(margin, yPos, pageWidth - margin * 2, 24, 3, 3, 'F')
+  doc.setTextColor(mediumGrayR, mediumGrayG, mediumGrayB)
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Thank you for your business.', margin + 6, yPos + 8)
+  doc.setTextColor(darkGrayR, darkGrayG, darkGrayB)
+  doc.setFont('helvetica', 'normal')
+  const footerLines = [
+    headerBusiness,
+    business?.email || '',
+    business?.phone || '',
+  ].filter(Boolean)
+  footerLines.forEach((line, idx) => {
+    doc.text(line, margin + 6, yPos + 16 + idx * 4.2)
+  })
+
+  const filename = `Invoice_${invoice.invoice_number}.pdf`
+  doc.save(filename)
 }

@@ -3,12 +3,19 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import toast from 'react-hot-toast'
-import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/common/Button'
 import { Input } from '@/components/common/Input'
-import { Loading } from '@/components/common/Loading'
+import { SkeletonTable } from '@/components/common/Skeleton'
 import type { BusinessProfile } from '@/types'
-import { getBusinessProfile, upsertBusinessProfile, uploadLogo, deleteLogo, getLogoUrl } from '@/services/businessProfileService'
+import {
+  getBusinessProfile,
+  upsertBusinessProfile,
+  uploadLogo,
+  deleteLogo,
+  getLogoUrl,
+} from '@/services/businessProfileService'
+import { Building2, Upload, Trash2, Globe, Mail, Phone, MapPin, FileCheck, Save } from 'lucide-react'
 
 const schema = z.object({
   business_name: z.string().min(1, 'Business name is required'),
@@ -17,66 +24,73 @@ const schema = z.object({
   state: z.string().optional(),
   country: z.string().optional(),
   postal_code: z.string().optional(),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
   phone: z.string().optional(),
-  website: z.string().url('Invalid URL').optional().or(z.literal('')),
+  website: z.string().url('Invalid URL format').optional().or(z.literal('')),
   tax_number: z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
 
 export function BusinessProfilePage() {
+  const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [profile, setProfile] = useState<BusinessProfile | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({ resolver: zodResolver(schema) })
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<FormData>({ resolver: zodResolver(schema) })
 
   useEffect(() => {
-    loadProfile()
-  }, [])
-
-  const loadProfile = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const data = await getBusinessProfile(user.id)
-    if (data) {
-      setProfile(data)
-      reset({
-        business_name: data.business_name,
-        address: data.address || '',
-        city: data.city || '',
-        state: data.state || '',
-        country: data.country || '',
-        postal_code: data.postal_code || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        website: data.website || '',
-        tax_number: data.tax_number || '',
-      })
-      if (profile?.logo_path) {
-        const url = await getLogoUrl(profile.logo_path)
-        setLogoPreview(url)
-      }
-      if (profile?.logo_path) {
-        const url = await getLogoUrl(profile.logo_path)
-        setLogoPreview(url)
-      }
+    if (user) {
+      loadProfile(user.id)
     }
-    setLoading(false)
+  }, [user])
+
+  const loadProfile = async (userId: string) => {
+    try {
+      const data = await getBusinessProfile(userId)
+      if (data) {
+        setProfile(data)
+        reset({
+          business_name: data.business_name || '',
+          address: data.address || '',
+          city: data.city || '',
+          state: data.state || '',
+          country: data.country || '',
+          postal_code: data.postal_code || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          website: data.website || '',
+          tax_number: data.tax_number || '',
+        })
+        if (data.logo_path) {
+          const url = await getLogoUrl(data.logo_path)
+          setLogoPreview(url)
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load business profile')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const onSubmit = async (data: FormData) => {
+    if (!user) return
     setSaving(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
       const updated = await upsertBusinessProfile(user.id, data as any)
       setProfile(updated)
-      toast.success('Business profile updated')
+      toast.success('Business profile saved successfully')
     } catch (err: any) {
-      toast.error(err.message)
+      toast.error(err.message || 'Failed to save business profile')
     } finally {
       setSaving(false)
     }
@@ -84,75 +98,215 @@ export function BusinessProfilePage() {
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file || !user) return
+
     if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file')
+      toast.error('Please upload an image file (PNG, JPG, SVG)')
       return
     }
     if (file.size > 2 * 1024 * 1024) {
-      toast.error('File size must be less than 2MB')
+      toast.error('File size must be under 2MB')
       return
     }
+
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      if (profile?.logo_path) await deleteLogo(profile.logo_path)
+      if (profile?.logo_path) {
+        await deleteLogo(profile.logo_path)
+      }
       const path = await uploadLogo(user.id, file)
       const updated = await upsertBusinessProfile(user.id, { logo_path: path })
       setProfile(updated)
       const url = await getLogoUrl(path)
       setLogoPreview(url)
-      toast.success('Logo uploaded')
+      toast.success('Logo uploaded successfully')
     } catch (err: any) {
-      toast.error(err.message)
+      toast.error(err.message || 'Failed to upload logo')
     }
   }
 
-  if (loading) return <Loading text="Loading business profile..." />
+  const handleRemoveLogo = async () => {
+    if (!profile?.logo_path || !user) return
+    try {
+      await deleteLogo(profile.logo_path)
+      const updated = await upsertBusinessProfile(user.id, { logo_path: null })
+      setProfile(updated)
+      setLogoPreview(null)
+      toast.success('Logo removed')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove logo')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-3xl space-y-6">
+        <div className="h-7 w-48 bg-slate-200 rounded-lg animate-pulse" />
+        <SkeletonTable rows={4} />
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">Business Profile</h1>
+    <div className="max-w-3xl space-y-6 animate-in fade-in duration-200">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Business Profile</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Set up your business identity, branding logo, address, and tax info to pre-fill future invoices.
+        </p>
+      </div>
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="bg-white rounded-lg shadow p-6 space-y-4">
-          <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-              {logoPreview ? (
-                <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
-              ) : (
-                <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m3.182-5.159l5.159-5.159m0 0L21.75 9.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15A2.25 2.25 0 002.25 6.75v10.5A2.25 2.25 0 004.5 19.5z" />
-                </svg>
-              )}
+        {/* Section 1: Logo & Identity */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs space-y-6">
+          <div className="flex items-center space-x-3 pb-3 border-b border-slate-100">
+            <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
+              <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-              <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
-                Upload Logo
-              </Button>
-              {profile?.logo_path && (
-                <button type="button" onClick={async () => { await deleteLogo(profile.logo_path!); setLogoPreview(null); setProfile({ ...profile, logo_path: null }) }} className="ml-2 text-sm text-red-600 hover:text-red-800">
-                  Remove
-                </button>
-              )}
+              <h2 className="text-base font-bold text-slate-900">Company Identity & Logo</h2>
+              <p className="text-xs text-slate-500">Your logo will appear on exported PDF invoices.</p>
             </div>
           </div>
-          <Input label="Business Name" {...register('business_name')} error={errors.business_name?.message} />
-          <Input label="Address" {...register('address')} error={errors.address?.message} />
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="City" {...register('city')} error={errors.city?.message} />
-            <Input label="State" {...register('state')} error={errors.state?.message} />
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+            {/* Logo Avatar Box */}
+            <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 relative group">
+              {logoPreview ? (
+                <img src={logoPreview} alt="Business Logo" className="w-full h-full object-contain p-2" />
+              ) : (
+                <Building2 className="w-8 h-8 text-slate-300" />
+              )}
+            </div>
+
+            {/* Upload Buttons */}
+            <div className="space-y-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoUpload}
+              />
+              <div className="flex items-center space-x-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  icon={<Upload className="w-3.5 h-3.5" />}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Upload New Logo
+                </Button>
+                {profile?.logo_path && (
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    icon={<Trash2 className="w-3.5 h-3.5" />}
+                    onClick={handleRemoveLogo}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Recommended: Square PNG, JPG or SVG, max size 2MB.
+              </p>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="Country" {...register('country')} error={errors.country?.message} />
-            <Input label="Postal Code" {...register('postal_code')} error={errors.postal_code?.message} />
-          </div>
-          <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
-          <Input label="Phone" {...register('phone')} error={errors.phone?.message} />
-          <Input label="Website" {...register('website')} error={errors.website?.message} />
-          <Input label="Tax Number" {...register('tax_number')} error={errors.tax_number?.message} />
+
+          <Input
+            label="Business / Company Name *"
+            {...register('business_name')}
+            error={errors.business_name?.message}
+            placeholder="e.g. Acme Creative Agency"
+          />
         </div>
-        <Button type="submit" loading={saving} className="w-full">Save Business Profile</Button>
+
+        {/* Section 2: Contact Details */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs space-y-6">
+          <div className="flex items-center space-x-3 pb-3 border-b border-slate-100">
+            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
+              <Mail className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Contact Information</h2>
+              <p className="text-xs text-slate-500">Contact info displayed on invoices.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Business Email"
+              type="email"
+              icon={<Mail className="w-4 h-4" />}
+              {...register('email')}
+              error={errors.email?.message}
+              placeholder="billing@yourcompany.com"
+            />
+            <Input
+              label="Phone Number"
+              icon={<Phone className="w-4 h-4" />}
+              {...register('phone')}
+              placeholder="+91 98765 43210"
+            />
+          </div>
+
+          <Input
+            label="Website URL"
+            icon={<Globe className="w-4 h-4" />}
+            {...register('website')}
+            error={errors.website?.message}
+            placeholder="https://yourcompany.com"
+          />
+        </div>
+
+        {/* Section 3: Address & Tax info */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs space-y-6">
+          <div className="flex items-center space-x-3 pb-3 border-b border-slate-100">
+            <div className="p-2 rounded-xl bg-teal-50 text-teal-600">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Address & Tax Details</h2>
+              <p className="text-xs text-slate-500">Official business location and registration numbers.</p>
+            </div>
+          </div>
+
+          <Input
+            label="Street Address"
+            {...register('address')}
+            placeholder="Suite 500, Tech Park, MG Road"
+          />
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Input label="City" {...register('city')} placeholder="Bengaluru" />
+            <Input label="State" {...register('state')} placeholder="Karnataka" />
+            <Input label="Postal Code" {...register('postal_code')} placeholder="560001" />
+            <Input label="Country" {...register('country')} placeholder="India" />
+          </div>
+
+          <Input
+            label="GSTIN / Tax Registration Number"
+            icon={<FileCheck className="w-4 h-4" />}
+            {...register('tax_number')}
+            placeholder="e.g. 29ABCDE1234F1Z5"
+          />
+        </div>
+
+        {/* Save Bar */}
+        <div className="flex justify-end pt-2">
+          <Button
+            type="submit"
+            loading={saving}
+            size="lg"
+            icon={<Save className="w-4 h-4" />}
+            className="w-full sm:w-auto shadow-md"
+          >
+            Save Business Profile
+          </Button>
+        </div>
       </form>
     </div>
   )
