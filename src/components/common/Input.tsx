@@ -1,22 +1,47 @@
-import { forwardRef } from 'react'
-import type { InputHTMLAttributes } from 'react'
+import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react'
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
+  hint?: string
+  icon?: ReactNode
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(({ label, error, className = '', ...props }, ref) => {
-  return (
-    <div className="w-full">
-      {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
-      <input
-        ref={ref}
-        className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${error ? 'border-red-500' : 'border-gray-300'} ${className}`}
-        {...props}
-      />
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
-    </div>
-  )
-})
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, error, hint, icon, className = '', ...props }, ref) => {
+    return (
+      <div className="w-full space-y-1.5">
+        {label && (
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
+            {label}
+          </label>
+        )}
+        <div className="relative rounded-xl shadow-2xs">
+          {icon && (
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              {icon}
+            </div>
+          )}
+          <input
+            ref={ref}
+            className={`w-full px-3.5 py-2 text-sm bg-white border rounded-xl transition-all duration-150 focus:outline-none focus:ring-2 ${
+              icon ? 'pl-10' : ''
+            } ${
+              error
+                ? 'border-rose-300 text-rose-900 focus:border-rose-500 focus:ring-rose-200'
+                : 'border-slate-200 text-slate-900 placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-600 focus:ring-blue-100'
+            } ${className}`}
+            {...props}
+          />
+        </div>
+        {error ? (
+          <p className="text-xs font-medium text-rose-600 animate-in fade-in duration-150">{error}</p>
+        ) : hint ? (
+          <p className="text-xs text-slate-500">{hint}</p>
+        ) : null}
+      </div>
+    )
+  }
+)
+
 Input.displayName = 'Input'

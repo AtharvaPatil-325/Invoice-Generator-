@@ -90,6 +90,22 @@ export async function deleteInvoice(userId: string, invoiceId: string) {
   if (error) throw new Error(error.message)
 }
 
+export async function updateInvoiceStatus(
+  userId: string,
+  invoiceId: string,
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+) {
+  const { data, error } = await supabase
+    .from('invoices')
+    .update({ status })
+    .eq('user_id', userId)
+    .eq('id', invoiceId)
+    .select()
+    .single()
+  if (error) throw new Error(error.message)
+  return data
+}
+
 export async function duplicateInvoice(userId: string, invoiceId: string) {
   const source = await getInvoice(userId, invoiceId)
   const { items, ...invoice } = source

@@ -1,49 +1,147 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { Button } from '@/components/common/Button'
+import { Avatar } from '@/components/common/Avatar'
+import {
+  LayoutDashboard,
+  FileText,
+  Users,
+  Building2,
+  Settings,
+  LogOut,
+  Receipt,
+  PlusCircle,
+  X,
+} from 'lucide-react'
 
 const navItems = [
-  { to: '/app/dashboard', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-  { to: '/app/invoices', label: 'Invoices', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-  { to: '/app/clients', label: 'Clients', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
-  { to: '/app/business-profile', label: 'Business Profile', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+  { to: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/app/invoices', label: 'Invoices', icon: FileText },
+  { to: '/app/clients', label: 'Clients', icon: Users },
+  { to: '/app/business-profile', label: 'Business Profile', icon: Building2 },
+  { to: '/app/settings', label: 'Settings', icon: Settings },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean
+  onClose?: () => void
+}
+
+export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const { signOut, user } = useAuth()
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
-      <div className="p-6">
-        <h1 className="text-xl font-bold text-primary">InvoiceGen</h1>
-      </div>
-      <nav className="flex-1 px-4 space-y-1">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                isActive ? 'bg-primary/10 text-primary' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`
-            }
-          >
-            <svg className="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-            </svg>
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
-      <div className="p-4 border-t border-gray-200">
-        <div className="mb-3 px-3">
-          <p className="text-sm font-medium text-gray-900 truncate">{user?.email}</p>
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs lg:hidden transition-opacity"
+          onClick={onClose}
+        />
+      )}
+
+      {/* Sidebar Container */}
+      <aside
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex flex-col h-full">
+          {/* Header / Logo */}
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+                <Receipt className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-lg font-bold text-slate-900 tracking-tight">InvoiceGen</span>
+                <span className="block text-[10px] font-semibold tracking-wider text-blue-600 uppercase">
+                  SaaS Dashboard
+                </span>
+              </div>
+            </div>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Action Quick Button */}
+          <div className="px-4 pt-5 pb-2">
+            <NavLink
+              to="/app/invoices/create"
+              onClick={onClose}
+              className="flex items-center justify-center space-x-2 w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md shadow-blue-500/20 transition-all active:scale-[0.98]"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Create Invoice</span>
+            </NavLink>
+          </div>
+
+          {/* Navigation Links */}
+          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            <div className="px-3 pb-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+              Navigation
+            </div>
+            {navItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `group relative flex items-center px-3.5 py-2.5 text-sm font-medium rounded-xl transition-all ${
+                      isActive
+                        ? 'bg-blue-50/80 text-blue-700 font-semibold shadow-2xs'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <span className="absolute left-0 top-2 bottom-2 w-1 bg-blue-600 rounded-r-full" />
+                      )}
+                      <Icon
+                        className={`mr-3 w-4 h-4 shrink-0 transition-colors ${
+                          isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-700'
+                        }`}
+                      />
+                      <span>{item.label}</span>
+                    </>
+                  )}
+                </NavLink>
+              )
+            })}
+          </nav>
+
+          {/* User Profile Footer */}
+          <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200/60 shadow-2xs">
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <Avatar email={user?.email} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-900 truncate">Account</p>
+                  <p className="text-[11px] text-slate-500 truncate">{user?.email || 'user@example.com'}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={signOut}
+                title="Sign Out"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
-        <Button variant="secondary" className="w-full" onClick={signOut}>
-          Sign Out
-        </Button>
-      </div>
-    </div>
+      </aside>
+    </>
   )
 }
-

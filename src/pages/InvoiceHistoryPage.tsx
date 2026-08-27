@@ -1,122 +1,362 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState, useMemo } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/common/Button'
-import { Loading } from '@/components/common/Loading'
-import { EmptyState } from '@/components/common/EmptyState'
-import type { Invoice } from '@/types'
+import { useAuth } from '@/contexts/AuthContext'
+import { getInvoices, deleteInvoice, duplicateInvoice, updateInvoiceStatus } from '@/services/invoiceService'
+import { getBusinessProfile } from '@/services/businessProfileService'
+import { generateInvoicePDF } from '@/services/pdfService'
+import type { Invoice, InvoiceItem } from '@/types'
 import { formatCurrency, formatDate, isOverdue } from '@/utils/invoiceCalculations'
-import { getInvoices } from '@/services/invoiceService'
+import { Button } from '@/components/common/Button'
+import { Input } from '@/components/common/Input'
+import { EmptyState } from '@/components/common/EmptyState'
+import { Avatar } from '@/components/common/Avatar'
+import { DropdownMenu } from '@/components/common/DropdownMenu'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { SkeletonTable } from '@/components/common/Skeleton'
+import {
+  Search,
+  Plus,
+  Eye,
+  Edit,
+  Download,
+  Copy,
+  Trash2,
+  ArrowUpDown,
+} from 'lucide-react'
 
 export function InvoiceHistoryPage() {
-  const [invoices, setInvoices] = useState<(Invoice & { client: any })[]>([])
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [invoices, setInvoices] = useState<(Invoice & { client: any; items?: InvoiceItem[] })[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadInvoices()
-  }, [])
+  // Filters & Sorting state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'amount_desc' | 'due_date'>('newest')
 
-  const loadInvoices = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const data = await getInvoices(user.id)
-    setInvoices(data)
-    setLoading(false)
+  // Delete dialog
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    if (user) {
+      loadInvoices(user.id)
+    }
+  }, [user])
+
+  const loadInvoices = async (userId: string) => {
+    try {
+      const data = await getInvoices(userId)
+      setInvoices(data)
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load invoices')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  if (loading) return <Loading text="Loading invoices..." />
+  const handleDelete = async () => {
+    if (!deleteId || !user) return
+    setDeleting(true)
+    try {
+      await deleteInvoice(user.id, deleteId)
+      toast.success('Invoice deleted')
+      setDeleteId(null)
+      loadInvoices(user.id)
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete invoice')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleDuplicate = async (invoiceId: string) => {
+    if (!user) return
+    try {
+      await duplicateInvoice(user.id, invoiceId)
+      toast.success('Invoice duplicated as draft')
+      loadInvoices(user.id)
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to duplicate invoice')
+    }
+  }
+
+  const handleDownloadPDF = async (inv: Invoice & { client: any; items?: InvoiceItem[] }) => {
+    if (!user) return
+    try {
+      const business = await getBusinessProfile(user.id)
+      generateInvoicePDF(inv as any, business)
+      toast.success('PDF generated successfully')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to generate PDF')
+    }
+  }
+
+  const handleQuickStatusChange = async (invoiceId: string, newStatus: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled') => {
+    if (!user) return
+    try {
+      await updateInvoiceStatus(user.id, invoiceId, newStatus)
+      setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? { ...inv, status: newStatus } : inv)))
+      toast.success(`Invoice marked as ${newStatus}`)
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update status')
+    }
+  }
+
+  // Filter and sort invoices list
+  const filteredInvoices = useMemo(() => {
+    return invoices
+      .filter((inv) => {
+        const matchesSearch =
+          inv.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          inv.client?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          inv.client?.company_name?.toLowerCase().includes(searchQuery.toLowerCase())
+
+        const overdueFlag = isOverdue(inv.due_date, inv.status)
+        const currentStatus = overdueFlag && inv.status !== 'paid' && inv.status !== 'cancelled' ? 'overdue' : inv.status
+
+        const matchesStatus =
+          statusFilter === 'all' || currentStatus === statusFilter
+
+        return matchesSearch && matchesStatus
+      })
+      .sort((a, b) => {
+        if (sortBy === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        if (sortBy === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        if (sortBy === 'amount_desc') return (b.total_amount || 0) - (a.total_amount || 0)
+        if (sortBy === 'due_date') return new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+        return 0
+      })
+  }, [invoices, searchQuery, statusFilter, sortBy])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <div className="h-7 w-32 bg-slate-200 rounded-lg animate-pulse" />
+            <div className="h-4 w-56 bg-slate-200 rounded-md animate-pulse" />
+          </div>
+          <div className="h-10 w-36 bg-slate-200 rounded-xl animate-pulse" />
+        </div>
+        <SkeletonTable rows={7} />
+      </div>
+    )
+  }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
+    <div className="space-y-6 animate-in fade-in duration-200">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">All Invoices</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Manage, filter, track and organize all your client invoices in one place.
+          </p>
+        </div>
         <Link to="/app/invoices/create">
-          <Button>+ Create Invoice</Button>
+          <Button icon={<Plus className="w-4 h-4" />} size="md" className="shadow-md">
+            Create Invoice
+          </Button>
         </Link>
       </div>
 
-      {invoices.length === 0 ? (
+      {/* Toolbar / Filters */}
+      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
+        {/* Search */}
+        <div className="w-full md:w-80">
+          <Input
+            placeholder="Search by invoice # or client..."
+            icon={<Search className="w-4 h-4" />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {/* Filters and Sort Controls */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+          {/* Status Filter Tabs / Dropdown */}
+          <div className="flex items-center space-x-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 text-xs font-semibold overflow-x-auto">
+            {['all', 'draft', 'sent', 'paid', 'overdue'].map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setStatusFilter(tab)}
+                className={`px-3 py-1.5 rounded-lg capitalize transition-all ${
+                  statusFilter === tab
+                    ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="flex items-center space-x-1 bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700">
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 mr-1" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-transparent focus:outline-none cursor-pointer"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="amount_desc">Highest Amount</option>
+              <option value="due_date">Due Date</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Invoices List Table */}
+      {filteredInvoices.length === 0 ? (
         <EmptyState
-          title="No invoices yet"
-          description="Create your first professional invoice to get started."
-            action={
+          title={searchQuery || statusFilter !== 'all' ? 'No matching invoices found' : 'No invoices created yet'}
+          description={
+            searchQuery || statusFilter !== 'all'
+              ? 'Try adjusting your search criteria or status filter.'
+              : 'Create your first professional invoice to start tracking payments.'
+          }
+          action={
+            searchQuery || statusFilter !== 'all' ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setSearchQuery('')
+                  setStatusFilter('all')
+                }}
+              >
+                Clear Filters
+              </Button>
+            ) : (
               <Link to="/app/invoices/create">
-                <Button>Create Invoice</Button>
+                <Button icon={<Plus className="w-4 h-4" />}>Create Your First Invoice</Button>
               </Link>
-            }
+            )
+          }
         />
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {invoices.map((invoice) => (
-                <tr key={invoice.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    <Link to={`/app/invoices/${invoice.id}`} className="hover:text-primary">
-                      {invoice.invoice_number}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{invoice.client?.name || 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(invoice.issue_date)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(invoice.due_date)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {formatCurrency(invoice.total_amount, invoice.currency)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      invoice.status === 'paid' ? 'bg-green-100 text-green-800' :
-                      isOverdue(invoice.due_date, invoice.status) ? 'bg-red-100 text-red-800' :
-                      invoice.status === 'sent' ? 'bg-blue-100 text-blue-800' :
-                      invoice.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {isOverdue(invoice.due_date, invoice.status) && invoice.status !== 'paid' ? 'Overdue' : invoice.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
-                    <Link to={`/app/invoices/${invoice.id}`} className="text-primary hover:underline">View</Link>
-                    <Link to={`/app/invoices/${invoice.id}/edit`} className="text-primary hover:underline">Edit</Link>
-                    <Link to={`/app/invoices/${invoice.id}`} className="text-primary hover:underline">PDF</Link>
-                    <button onClick={async () => {
-                      try {
-                        const { data: { user } } = await supabase.auth.getUser()
-                        if (!user) return
-                        const { duplicateInvoice } = await import('@/services/invoiceService')
-                        await duplicateInvoice(user.id, invoice.id)
-                        toast.success('Invoice duplicated')
-                        loadInvoices()
-                      } catch (err: any) { toast.error(err.message) }
-                    }} className="text-primary hover:underline">Duplicate</button>
-                    <button onClick={async () => {
-                      if (!confirm('Are you sure you want to delete this invoice?')) return
-                      try {
-                        const { data: { user } } = await supabase.auth.getUser()
-                        if (!user) return
-                        const { deleteInvoice } = await import('@/services/invoiceService')
-                        await deleteInvoice(user.id, invoice.id)
-                        toast.success('Invoice deleted')
-                        loadInvoices()
-                      } catch (err: any) { toast.error(err.message) }
-                    }} className="text-red-600 hover:underline">Delete</button>
-                  </td>
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-6 py-3.5">Invoice</th>
+                  <th className="px-6 py-3.5">Client</th>
+                  <th className="px-6 py-3.5">Issue Date</th>
+                  <th className="px-6 py-3.5">Due Date</th>
+                  <th className="px-6 py-3.5">Amount</th>
+                  <th className="px-6 py-3.5">Status</th>
+                  <th className="px-6 py-3.5 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                {filteredInvoices.map((invoice) => {
+                  const overdueFlag = isOverdue(invoice.due_date, invoice.status)
+                  return (
+                    <tr
+                      key={invoice.id}
+                      className="hover:bg-slate-50/80 transition-colors group"
+                    >
+                      <td className="px-6 py-4 font-semibold text-slate-900 whitespace-nowrap">
+                        <Link
+                          to={`/app/invoices/${invoice.id}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline font-bold"
+                        >
+                          {invoice.invoice_number}
+                        </Link>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-2.5">
+                          <Avatar name={invoice.client?.name} size="sm" />
+                          <div>
+                            <span className="font-semibold text-slate-900 block">
+                              {invoice.client?.name || 'Unassigned'}
+                            </span>
+                            {invoice.client?.company_name && (
+                              <span className="text-[11px] text-slate-400 block">
+                                {invoice.client.company_name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-slate-500">
+                        {formatDate(invoice.issue_date)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-slate-500">
+                        {formatDate(invoice.due_date)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap font-bold text-slate-900">
+                        {formatCurrency(invoice.total_amount, invoice.currency || 'INR')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <select
+                          value={overdueFlag && invoice.status !== 'paid' && invoice.status !== 'cancelled' ? 'overdue' : invoice.status}
+                          onChange={(e) => handleQuickStatusChange(invoice.id, e.target.value as any)}
+                          className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600"
+                        >
+                          <option value="draft">Draft</option>
+                          <option value="sent">Sent</option>
+                          <option value="paid">Paid</option>
+                          <option value="overdue">Overdue</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <DropdownMenu
+                          items={[
+                            {
+                              label: 'View Details',
+                              icon: <Eye className="w-4 h-4" />,
+                              onClick: () => navigate(`/app/invoices/${invoice.id}`),
+                            },
+                            {
+                              label: 'Edit Invoice',
+                              icon: <Edit className="w-4 h-4" />,
+                              onClick: () => navigate(`/app/invoices/${invoice.id}/edit`),
+                            },
+                            {
+                              label: 'Download PDF',
+                              icon: <Download className="w-4 h-4" />,
+                              onClick: () => handleDownloadPDF(invoice),
+                            },
+                            {
+                              label: 'Duplicate',
+                              icon: <Copy className="w-4 h-4" />,
+                              onClick: () => handleDuplicate(invoice.id),
+                            },
+                            {
+                              label: 'Delete',
+                              icon: <Trash2 className="w-4 h-4" />,
+                              danger: true,
+                              onClick: () => setDeleteId(invoice.id),
+                            },
+                          ]}
+                        />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
+
+      {/* Delete Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Invoice"
+        message="Are you sure you want to delete this invoice? This action cannot be undone."
+        loading={deleting}
+      />
     </div>
   )
 }

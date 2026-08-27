@@ -1,20 +1,22 @@
 import type { ReactNode } from 'react'
+import { FileQuestion } from 'lucide-react'
 
 interface EmptyStateProps {
   title: string
   description: string
   action?: ReactNode
+  icon?: ReactNode
 }
 
-export function EmptyState({ title, description, action }: EmptyStateProps) {
+export function EmptyState({ title, description, action, icon }: EmptyStateProps) {
   return (
-    <div className="text-center py-12">
-      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6m-3-3v6m-9 1V7.8a2.2 2.2 0 011.4-2.1l7.6-2.7a2.2 2.2 0 011.6.1l2.7 1.6a2.2 2.2 0 011 1.9V15a2.2 2.2 0 01-2.2 2.2h-1.1" />
-      </svg>
-      <h3 className="mt-4 text-lg font-medium text-gray-900">{title}</h3>
-      <p className="mt-2 text-gray-500">{description}</p>
-      {action && <div className="mt-6">{action}</div>}
+    <div className="text-center py-12 px-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs my-4">
+      <div className="mx-auto w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mb-4 shadow-2xs">
+        {icon || <FileQuestion className="w-7 h-7" />}
+      </div>
+      <h3 className="text-base font-bold text-slate-900">{title}</h3>
+      <p className="mt-1 text-sm text-slate-500 max-w-sm mx-auto">{description}</p>
+      {action && <div className="mt-5">{action}</div>}
     </div>
   )
 }
