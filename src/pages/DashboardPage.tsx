@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { getInvoices, deleteInvoice, duplicateInvoice } from '@/services/invoiceService'
-import type { Invoice, InvoiceItem } from '@/types'
+import { getClients } from '@/services/clientService'
+import type { Invoice, InvoiceItem, Client } from '@/types'
 import { formatCurrency, formatDate, isOverdue } from '@/utils/invoiceCalculations'
+import { calculateAnalytics, type DateRange, type AnalyticsFilters } from '@/utils/analyticsCalculations'
 import { Button } from '@/components/common/Button'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -13,6 +15,13 @@ import { CardIcon } from '@/components/common/Card'
 import { DropdownMenu } from '@/components/common/DropdownMenu'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { SkeletonStatCard, SkeletonTable } from '@/components/common/Skeleton'
+import { AnalyticsMetricCard } from '@/components/analytics/AnalyticsMetricCard'
+import { RevenueChart } from '@/components/analytics/RevenueChart'
+import { InvoiceStatusChart } from '@/components/analytics/InvoiceStatusChart'
+import { TopClientsCard } from '@/components/analytics/TopClientsCard'
+import { CollectionRateCard } from '@/components/analytics/CollectionRateCard'
+import { DateRangeFilter } from '@/components/analytics/DateRangeFilter'
+import { AnalyticsSkeleton } from '@/components/analytics/AnalyticsSkeleton'
 import { generateInvoicePDF } from '@/services/pdfService'
 import { getBusinessProfile } from '@/services/businessProfileService'
 import {
@@ -29,15 +38,21 @@ import {
   Download,
   Copy,
   Trash2,
-  Briefcase,
   Wallet,
+  DollarSign,
+  BarChart3,
+  Target,
 } from 'lucide-react'
 
 export function DashboardPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [invoices, setInvoices] = useState<(Invoice & { client: any; items?: InvoiceItem[] })[]>([])
+  const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
+  const [analyticsDateRange, setAnalyticsDateRange] = useState<DateRange>('month')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
 
   // Confirm delete dialog state
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -45,16 +60,20 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (user) {
-      loadInvoices(user.id)
+      loadData(user.id)
     }
   }, [user])
 
-  const loadInvoices = async (userId: string) => {
+  const loadData = async (userId: string) => {
     try {
-      const data = await getInvoices(userId)
-      setInvoices(data)
+      const [invoicesData, clientsData] = await Promise.all([
+        getInvoices(userId),
+        getClients(userId),
+      ])
+      setInvoices(invoicesData)
+      setClients(clientsData)
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load invoices')
+      toast.error(err.message || 'Failed to load dashboard data')
     } finally {
       setLoading(false)
     }
@@ -67,7 +86,7 @@ export function DashboardPage() {
       await deleteInvoice(user.id, deleteId)
       toast.success('Invoice deleted successfully')
       setDeleteId(null)
-      loadInvoices(user.id)
+      loadData(user.id)
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete invoice')
     } finally {
@@ -80,7 +99,7 @@ export function DashboardPage() {
     try {
       await duplicateInvoice(user.id, invoiceId)
       toast.success('Invoice duplicated as draft')
-      loadInvoices(user.id)
+      loadData(user.id)
     } catch (err: any) {
       toast.error(err.message || 'Failed to duplicate invoice')
     }
@@ -90,34 +109,36 @@ export function DashboardPage() {
     if (!user) return
     try {
       const business = await getBusinessProfile(user.id)
-      generateInvoicePDF(inv as any, business)
+      await generateInvoicePDF(inv as any, business)
       toast.success('PDF generated successfully')
     } catch (err: any) {
       toast.error(err.message || 'Failed to generate PDF')
     }
   }
 
-  // Calculate Metrics
+  const analyticsFilters: AnalyticsFilters = useMemo(() => ({
+    dateRange: analyticsDateRange,
+    customStart: customStart || undefined,
+    customEnd: customEnd || undefined,
+  }), [analyticsDateRange, customStart, customEnd])
+
+  const analytics = useMemo(() => calculateAnalytics(invoices, clients, analyticsFilters), [invoices, clients, analyticsFilters])
+
   const stats = {
     total: invoices.length,
     draft: invoices.filter((i) => i.status === 'draft').length,
     sent: invoices.filter((i) => i.status === 'sent').length,
     paid: invoices.filter((i) => i.status === 'paid').length,
     overdue: invoices.filter((i) => isOverdue(i.due_date, i.status)).length,
-    totalValue: invoices.reduce((sum, i) => sum + (i.total_amount || 0), 0),
-    paidValue: invoices
-      .filter((i) => i.status === 'paid')
-      .reduce((sum, i) => sum + (i.total_amount || 0), 0),
-    pendingValue: invoices
-      .filter((i) => i.status === 'sent' || i.status === 'draft')
-      .reduce((sum, i) => sum + (i.total_amount || 0), 0),
-    overdueValue: invoices
-      .filter((i) => isOverdue(i.due_date, i.status))
-      .reduce((sum, i) => sum + (i.total_amount || 0), 0),
   }
 
-  const paidPercentage =
-    stats.totalValue > 0 ? Math.min(100, Math.round((stats.paidValue / stats.totalValue) * 100)) : 0
+  const growthInfo = useMemo(() => {
+    const { revenueGrowthPercentage } = analytics
+    return {
+      text: `${revenueGrowthPercentage >= 0 ? '+' : ''}${revenueGrowthPercentage.toFixed(1)}%`,
+      isPositive: revenueGrowthPercentage >= 0,
+    }
+  }, [analytics])
 
   if (loading) {
     return (
@@ -134,48 +155,11 @@ export function DashboardPage() {
             <SkeletonStatCard key={i} />
           ))}
         </div>
+        <AnalyticsSkeleton />
         <SkeletonTable rows={5} />
       </div>
     )
   }
-
-  const statCards = [
-    {
-      title: 'Total Invoices',
-      value: stats.total,
-      icon: FileText,
-      color: 'primary',
-      size: 'md',
-    },
-    {
-      title: 'Draft',
-      value: stats.draft,
-      icon: FileClock,
-      color: 'slate',
-      size: 'md',
-    },
-    {
-      title: 'Sent',
-      value: stats.sent,
-      icon: Send,
-      color: 'indigo',
-      size: 'md',
-    },
-    {
-      title: 'Paid',
-      value: stats.paid,
-      icon: CheckCircle2,
-      color: 'success',
-      size: 'md',
-    },
-    {
-      title: 'Overdue',
-      value: stats.overdue,
-      icon: AlertCircle,
-      color: 'danger',
-      size: 'md',
-    },
-  ]
 
   return (
     <div className="space-y-8 animate-in slide-up duration-200">
@@ -196,7 +180,13 @@ export function DashboardPage() {
 
       {/* Stats Grid Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {statCards.map((card, index) => {
+        {[
+          { title: 'Total Invoices', value: stats.total, icon: FileText, color: 'primary' as const },
+          { title: 'Draft', value: stats.draft, icon: FileClock, color: 'slate' as const },
+          { title: 'Sent', value: stats.sent, icon: Send, color: 'indigo' as const },
+          { title: 'Paid', value: stats.paid, icon: CheckCircle2, color: 'success' as const },
+          { title: 'Overdue', value: stats.overdue, icon: AlertCircle, color: 'danger' as const },
+        ].map((card, index) => {
           const Icon = card.icon
           return (
             <div
@@ -204,14 +194,12 @@ export function DashboardPage() {
               className={`bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 animate-in slide-up stagger-${index + 1}`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  {card.title}
-                </span>
-                <CardIcon color={card.color as any} size="sm">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{card.title}</span>
+                <CardIcon color={card.color} size="sm">
                   <Icon className="w-4 h-4" />
                 </CardIcon>
               </div>
-              <div className="mt-3 flex items-baseline justify-between">
+              <div className="mt-3">
                 <span className="text-2xl font-bold text-slate-900">{card.value}</span>
               </div>
             </div>
@@ -219,94 +207,126 @@ export function DashboardPage() {
         })}
       </div>
 
-      {/* Financial Summary & Revenue Card */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-lg border border-slate-800 relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 opacity-[0.08] pointer-events-none">
-            <TrendingUp className="w-64 h-64 text-white" />
+      {/* Financial Overview Section */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Financial Overview</h2>
+            <p className="text-xs text-slate-500">Revenue, growth, and collection metrics</p>
           </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <span className="p-2 rounded-xl bg-white/10 backdrop-blur-xs text-primary-400">
-                <Wallet className="w-5 h-5" />
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
-                Total Invoice Value
-              </span>
-            </div>
-
-            <div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-                {formatCurrency(stats.totalValue, 'INR')}
-              </h2>
-              <p className="text-xs text-slate-400 mt-1">Cumulative value of all generated invoices</p>
-            </div>
-          </div>
-
-          {/* Progress Bar & Sub-metrics */}
-          <div className="mt-8 pt-6 border-t border-slate-700/80 space-y-3">
-            <div className="flex items-center justify-between text-xs text-slate-300 font-medium">
-              <span>Collection Progress ({paidPercentage}% Paid)</span>
-              <span>{formatCurrency(stats.paidValue, 'INR')} / {formatCurrency(stats.totalValue, 'INR')}</span>
-            </div>
-            <div className="w-full h-2.5 bg-slate-700 rounded-full overflow-hidden p-0.5">
-              <div
-                className="h-full bg-gradient-to-r from-success-500 to-teal-400 rounded-full transition-all duration-500"
-                style={{ width: `${paidPercentage}%` }}
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">
-              <div className="p-2 rounded-xl bg-white/5 border border-white/10">
-                <span className="block text-slate-400 text-[10px] uppercase font-semibold">Paid</span>
-                <span className="font-bold text-success-400 mt-0.5 block truncate">
-                  {formatCurrency(stats.paidValue, 'INR')}
-                </span>
-              </div>
-              <div className="p-2 rounded-xl bg-white/5 border border-white/10">
-                <span className="block text-slate-400 text-[10px] uppercase font-semibold">Pending</span>
-                <span className="font-bold text-warning-400 mt-0.5 block truncate">
-                  {formatCurrency(stats.pendingValue, 'INR')}
-                </span>
-              </div>
-              <div className="p-2 rounded-xl bg-white/5 border border-white/10">
-                <span className="block text-slate-400 text-[10px] uppercase font-semibold">Overdue</span>
-                <span className="font-bold text-danger-400 mt-0.5 block truncate">
-                  {formatCurrency(stats.overdueValue, 'INR')}
-                </span>
-              </div>
-            </div>
-          </div>
+          <DateRangeFilter
+            value={analyticsDateRange}
+            onChange={(range) => {
+              setAnalyticsDateRange(range)
+              if (range !== 'custom') {
+                setCustomStart('')
+                setCustomEnd('')
+              }
+            }}
+            onCustomChange={(start, end) => {
+              if (start && end) {
+                setAnalyticsDateRange('custom')
+                setCustomStart(start)
+                setCustomEnd(end)
+              }
+            }}
+          />
         </div>
 
-        {/* Quick Action / Tips Card */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
-          <div className="space-y-3">
-            <CardIcon color="primary" size="md">
-              <Briefcase className="w-5 h-5" />
-            </CardIcon>
-            <h3 className="text-base font-bold text-slate-900">Manage Your Business</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Ensure your business profile and tax details are completed so invoices automatically populate with correct info.
-            </p>
-          </div>
+        {/* Revenue Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <AnalyticsMetricCard
+            title="Revenue This Month"
+            value={formatCurrency(analytics.currentMonthRevenue, analytics.currency)}
+            subtitle="Current calendar month"
+            growth={{
+              value: analytics.revenueGrowthPercentage,
+              label: 'from last month',
+            }}
+            icon={<Wallet className="w-4 h-4" />}
+            iconColor="primary"
+          />
+          <AnalyticsMetricCard
+            title="Average Invoice Value"
+            value={formatCurrency(analytics.averageInvoiceValue, analytics.currency)}
+            subtitle={`${analytics.invoiceCount} valid invoices`}
+            icon={<DollarSign className="w-4 h-4" />}
+            iconColor="indigo"
+          />
+          <AnalyticsMetricCard
+            title="Collection Rate"
+            value={`${analytics.collectionRate}%`}
+            subtitle={`${formatCurrency(analytics.paidAmount, analytics.currency)} collected`}
+            icon={<Target className="w-4 h-4" />}
+            iconColor="success"
+          />
+          <AnalyticsMetricCard
+            title="Outstanding Revenue"
+            value={formatCurrency(analytics.outstandingAmount, analytics.currency)}
+            subtitle="Pending, sent & overdue"
+            icon={<BarChart3 className="w-4 h-4" />}
+            iconColor="warning"
+          />
+        </div>
+      </div>
 
-          <div className="space-y-2 pt-6">
-            <Link
-              to="/app/clients"
-              className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-xs font-semibold text-slate-700 transition-colors duration-150"
-            >
-              <span>Manage Clients</span>
-              <ArrowRight className="w-4 h-4 text-slate-400" />
-            </Link>
-            <Link
-              to="/app/business-profile"
-              className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100/80 text-xs font-semibold text-slate-700 transition-colors duration-150"
-            >
-              <span>Edit Business Profile</span>
-              <ArrowRight className="w-4 h-4 text-slate-400" />
-            </Link>
+      {/* Revenue Performance */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold text-slate-900">Revenue Performance</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs">
+            <h3 className="text-sm font-bold text-slate-900 mb-4">Revenue Overview</h3>
+            <RevenueChart data={analytics.revenueHistory} currency={analytics.currency} timeRange={analyticsDateRange} />
+          </div>
+          <InvoiceStatusChart
+            paid={analytics.paidAmount}
+            pending={analytics.pendingAmount}
+            sent={analytics.sentAmount}
+            overdue={analytics.overdueAmount}
+            currency={analytics.currency}
+            paidCount={analytics.paidCount}
+            pendingCount={analytics.pendingCount}
+            sentCount={analytics.sentCount}
+            overdueCount={analytics.overdueCount}
+          />
+        </div>
+      </div>
+
+      {/* Client Performance */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold text-slate-900">Client Performance</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TopClientsCard clients={analytics.topClients} currency={analytics.currency} />
+          <CollectionRateCard
+            rate={analytics.collectionRate}
+            collected={analytics.paidAmount}
+            total={analytics.totalRevenue}
+            currency={analytics.currency}
+          />
+        </div>
+      </div>
+
+      {/* Financial Summary */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-2xs">
+        <h3 className="text-sm font-bold text-slate-900 mb-4">Financial Summary</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Revenue</p>
+            <p className="text-xl font-bold text-slate-900">{formatCurrency(analytics.totalRevenue, analytics.currency)}</p>
+            <div className={`flex items-center mt-1 text-xs font-semibold ${growthInfo.isPositive ? 'text-success-600' : 'text-danger-600'}`}>
+              {growthInfo.isPositive ? <TrendingUp className="w-3.5 h-3.5 mr-1" /> : null}
+              <span>{growthInfo.text} from last month</span>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Collected</p>
+            <p className="text-xl font-bold text-success-600">{formatCurrency(analytics.paidAmount, analytics.currency)}</p>
+            <p className="text-xs text-slate-500 mt-1">{analytics.paidCount} paid invoices</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Outstanding</p>
+            <p className="text-xl font-bold text-warning-600">{formatCurrency(analytics.outstandingAmount, analytics.currency)}</p>
+            <p className="text-xs text-slate-500 mt-1">{analytics.pendingCount + analytics.sentCount + analytics.overdueCount} unpaid invoices</p>
           </div>
         </div>
       </div>

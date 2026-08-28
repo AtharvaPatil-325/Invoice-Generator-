@@ -89,7 +89,7 @@ export function InvoiceHistoryPage() {
     if (!user) return
     try {
       const business = await getBusinessProfile(user.id)
-      generateInvoicePDF(inv as any, business)
+      await generateInvoicePDF(inv as any, business)
       toast.success('PDF generated successfully')
     } catch (err: any) {
       toast.error(err.message || 'Failed to generate PDF')

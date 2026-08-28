@@ -49,9 +49,9 @@ export function InvoicePreviewPage() {
     }
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!invoice) return
-    generateInvoicePDF(invoice, business)
+    await generateInvoicePDF(invoice, business)
     toast.success('PDF downloaded successfully')
   }
 
